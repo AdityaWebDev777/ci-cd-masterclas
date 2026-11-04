@@ -9,4 +9,8 @@ public class HealthCheck {
 public String healthCheck(){
     return "okay";
 }
+@GetMapping("/users")
+    public String getUgsers(){
+        return "Aditya again changes in the project an update using CI-CD without again deploy";
+}
 }
