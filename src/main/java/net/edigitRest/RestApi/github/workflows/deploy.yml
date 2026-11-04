@@ -1,0 +1,69 @@
+name: Spring Boot build and deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: spring-boot-app
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 1. Checkout Source Code
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      # 2. Setup Java
+      - name: Setting Up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      # 3. Build JAR
+      - name: Build Jar
+        run: mvn clean package -DskipTests
+
+      # 4. Build Docker Image
+      - name: Building Docker Image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+
+      # 5. Login to Docker Hub
+      - name: Login to Dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 6. Push Image
+      - name: Push Image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+      # 7. Deploy to EC2
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            docker stop spring-boot-app || true
+
+            docker rm spring-boot-app || true
+
+            docker run -d \
+              --name spring-boot-app \
+              --restart unless-stopped \
+              -p 8081:8081 \
+              ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            docker image prune -f
