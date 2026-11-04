@@ -13,4 +13,8 @@ public String healthCheck(){
     public String getUgsers(){
         return "Aditya again changes in the project an update using CI-CD without again deploy";
 }
+@GetMapping("again")
+    public String again(){
+        return "aditya bhai shik gaye CI-CD paisa hi paisa";
+}
 }
